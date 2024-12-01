@@ -261,7 +261,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.PageInfo.StartCursor(childComplexity), true
 
-	case "Query.messages_by_date":
+	case "Query.messagesByDate":
 		if e.complexity.Query.MessagesByDate == nil {
 			break
 		}
@@ -1793,8 +1793,8 @@ func (ec *executionContext) fieldContext_Query_users(_ context.Context, field gr
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_messages_by_date(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_messages_by_date(ctx, field)
+func (ec *executionContext) _Query_messagesByDate(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_messagesByDate(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1824,7 +1824,7 @@ func (ec *executionContext) _Query_messages_by_date(ctx context.Context, field g
 	return ec.marshalNDate_Message2ᚕᚖbackendᚋentᚐDate_Messageᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query_messages_by_date(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_messagesByDate(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -4312,7 +4312,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "messages_by_date":
+		case "messagesByDate":
 			field := field
 
 			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
@@ -4321,7 +4321,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_messages_by_date(ctx, field)
+				res = ec._Query_messagesByDate(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
