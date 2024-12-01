@@ -8,21 +8,64 @@ import (
 )
 
 var (
+	// DateMessagesColumns holds the columns for the "date_messages" table.
+	DateMessagesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// DateMessagesTable holds the schema information for the "date_messages" table.
+	DateMessagesTable = &schema.Table{
+		Name:       "date_messages",
+		Columns:    DateMessagesColumns,
+		PrimaryKey: []*schema.Column{DateMessagesColumns[0]},
+	}
 	// MessagesColumns holds the columns for the "messages" table.
 	MessagesColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "content", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "date_id", Type: field.TypeUUID},
+		{Name: "user_id", Type: field.TypeUUID},
 	}
 	// MessagesTable holds the schema information for the "messages" table.
 	MessagesTable = &schema.Table{
 		Name:       "messages",
 		Columns:    MessagesColumns,
 		PrimaryKey: []*schema.Column{MessagesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "messages_date_messages_messages",
+				Columns:    []*schema.Column{MessagesColumns[3]},
+				RefColumns: []*schema.Column{DateMessagesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "messages_users_messages",
+				Columns:    []*schema.Column{MessagesColumns[4]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
+	// UsersColumns holds the columns for the "users" table.
+	UsersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+	}
+	// UsersTable holds the schema information for the "users" table.
+	UsersTable = &schema.Table{
+		Name:       "users",
+		Columns:    UsersColumns,
+		PrimaryKey: []*schema.Column{UsersColumns[0]},
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		DateMessagesTable,
 		MessagesTable,
+		UsersTable,
 	}
 )
 
 func init() {
+	MessagesTable.ForeignKeys[0].RefTable = DateMessagesTable
+	MessagesTable.ForeignKeys[1].RefTable = UsersTable
 }

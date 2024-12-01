@@ -3,12 +3,17 @@
 package ent
 
 import (
+	"backend/ent/date_message"
 	"backend/ent/message"
+	"backend/ent/user"
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 )
 
 // MessageCreate is the builder for creating a Message entity.
@@ -18,6 +23,76 @@ type MessageCreate struct {
 	hooks    []Hook
 }
 
+// SetUserID sets the "user_id" field.
+func (mc *MessageCreate) SetUserID(u uuid.UUID) *MessageCreate {
+	mc.mutation.SetUserID(u)
+	return mc
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (mc *MessageCreate) SetNillableUserID(u *uuid.UUID) *MessageCreate {
+	if u != nil {
+		mc.SetUserID(*u)
+	}
+	return mc
+}
+
+// SetContent sets the "content" field.
+func (mc *MessageCreate) SetContent(s string) *MessageCreate {
+	mc.mutation.SetContent(s)
+	return mc
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (mc *MessageCreate) SetCreatedAt(t time.Time) *MessageCreate {
+	mc.mutation.SetCreatedAt(t)
+	return mc
+}
+
+// SetDateID sets the "date_id" field.
+func (mc *MessageCreate) SetDateID(u uuid.UUID) *MessageCreate {
+	mc.mutation.SetDateID(u)
+	return mc
+}
+
+// SetNillableDateID sets the "date_id" field if the given value is not nil.
+func (mc *MessageCreate) SetNillableDateID(u *uuid.UUID) *MessageCreate {
+	if u != nil {
+		mc.SetDateID(*u)
+	}
+	return mc
+}
+
+// SetID sets the "id" field.
+func (mc *MessageCreate) SetID(u uuid.UUID) *MessageCreate {
+	mc.mutation.SetID(u)
+	return mc
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (mc *MessageCreate) SetNillableID(u *uuid.UUID) *MessageCreate {
+	if u != nil {
+		mc.SetID(*u)
+	}
+	return mc
+}
+
+// SetUser sets the "user" edge to the User entity.
+func (mc *MessageCreate) SetUser(u *User) *MessageCreate {
+	return mc.SetUserID(u.ID)
+}
+
+// SetDateMessageID sets the "date_message" edge to the Date_Message entity by ID.
+func (mc *MessageCreate) SetDateMessageID(id uuid.UUID) *MessageCreate {
+	mc.mutation.SetDateMessageID(id)
+	return mc
+}
+
+// SetDateMessage sets the "date_message" edge to the Date_Message entity.
+func (mc *MessageCreate) SetDateMessage(d *Date_Message) *MessageCreate {
+	return mc.SetDateMessageID(d.ID)
+}
+
 // Mutation returns the MessageMutation object of the builder.
 func (mc *MessageCreate) Mutation() *MessageMutation {
 	return mc.mutation
@@ -25,6 +100,7 @@ func (mc *MessageCreate) Mutation() *MessageMutation {
 
 // Save creates the Message in the database.
 func (mc *MessageCreate) Save(ctx context.Context) (*Message, error) {
+	mc.defaults()
 	return withHooks(ctx, mc.sqlSave, mc.mutation, mc.hooks)
 }
 
@@ -50,8 +126,47 @@ func (mc *MessageCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (mc *MessageCreate) defaults() {
+	if _, ok := mc.mutation.UserID(); !ok {
+		v := message.DefaultUserID()
+		mc.mutation.SetUserID(v)
+	}
+	if _, ok := mc.mutation.DateID(); !ok {
+		v := message.DefaultDateID()
+		mc.mutation.SetDateID(v)
+	}
+	if _, ok := mc.mutation.ID(); !ok {
+		v := message.DefaultID()
+		mc.mutation.SetID(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (mc *MessageCreate) check() error {
+	if _, ok := mc.mutation.UserID(); !ok {
+		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "Message.user_id"`)}
+	}
+	if _, ok := mc.mutation.Content(); !ok {
+		return &ValidationError{Name: "content", err: errors.New(`ent: missing required field "Message.content"`)}
+	}
+	if v, ok := mc.mutation.Content(); ok {
+		if err := message.ContentValidator(v); err != nil {
+			return &ValidationError{Name: "content", err: fmt.Errorf(`ent: validator failed for field "Message.content": %w`, err)}
+		}
+	}
+	if _, ok := mc.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Message.created_at"`)}
+	}
+	if _, ok := mc.mutation.DateID(); !ok {
+		return &ValidationError{Name: "date_id", err: errors.New(`ent: missing required field "Message.date_id"`)}
+	}
+	if len(mc.mutation.UserIDs()) == 0 {
+		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "Message.user"`)}
+	}
+	if len(mc.mutation.DateMessageIDs()) == 0 {
+		return &ValidationError{Name: "date_message", err: errors.New(`ent: missing required edge "Message.date_message"`)}
+	}
 	return nil
 }
 
@@ -66,8 +181,13 @@ func (mc *MessageCreate) sqlSave(ctx context.Context) (*Message, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != nil {
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
+	}
 	mc.mutation.id = &_node.ID
 	mc.mutation.done = true
 	return _node, nil
@@ -76,8 +196,54 @@ func (mc *MessageCreate) sqlSave(ctx context.Context) (*Message, error) {
 func (mc *MessageCreate) createSpec() (*Message, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Message{config: mc.config}
-		_spec = sqlgraph.NewCreateSpec(message.Table, sqlgraph.NewFieldSpec(message.FieldID, field.TypeInt))
+		_spec = sqlgraph.NewCreateSpec(message.Table, sqlgraph.NewFieldSpec(message.FieldID, field.TypeUUID))
 	)
+	if id, ok := mc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = &id
+	}
+	if value, ok := mc.mutation.Content(); ok {
+		_spec.SetField(message.FieldContent, field.TypeString, value)
+		_node.Content = value
+	}
+	if value, ok := mc.mutation.CreatedAt(); ok {
+		_spec.SetField(message.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if nodes := mc.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   message.UserTable,
+			Columns: []string{message.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.UserID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := mc.mutation.DateMessageIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   message.DateMessageTable,
+			Columns: []string{message.DateMessageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(date_message.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.DateID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	return _node, _spec
 }
 
@@ -99,6 +265,7 @@ func (mcb *MessageCreateBulk) Save(ctx context.Context) ([]*Message, error) {
 	for i := range mcb.builders {
 		func(i int, root context.Context) {
 			builder := mcb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*MessageMutation)
 				if !ok {
@@ -125,10 +292,6 @@ func (mcb *MessageCreateBulk) Save(ctx context.Context) ([]*Message, error) {
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
-					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
-				}
 				mutation.done = true
 				return nodes[i], nil
 			})

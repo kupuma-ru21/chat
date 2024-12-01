@@ -3,8 +3,10 @@
 package ent
 
 import (
+	"backend/ent/date_message"
 	"backend/ent/message"
 	"backend/ent/predicate"
+	"backend/ent/user"
 	"context"
 	"fmt"
 	"math"
@@ -13,15 +15,20 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 )
 
 // MessageQuery is the builder for querying Message entities.
 type MessageQuery struct {
 	config
-	ctx        *QueryContext
-	order      []message.OrderOption
-	inters     []Interceptor
-	predicates []predicate.Message
+	ctx             *QueryContext
+	order           []message.OrderOption
+	inters          []Interceptor
+	predicates      []predicate.Message
+	withUser        *UserQuery
+	withDateMessage *DateMessageQuery
+	modifiers       []func(*sql.Selector)
+	loadTotal       []func(context.Context, []*Message) error
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -58,6 +65,50 @@ func (mq *MessageQuery) Order(o ...message.OrderOption) *MessageQuery {
 	return mq
 }
 
+// QueryUser chains the current query on the "user" edge.
+func (mq *MessageQuery) QueryUser() *UserQuery {
+	query := (&UserClient{config: mq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := mq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := mq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(message.Table, message.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, message.UserTable, message.UserColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(mq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryDateMessage chains the current query on the "date_message" edge.
+func (mq *MessageQuery) QueryDateMessage() *DateMessageQuery {
+	query := (&DateMessageClient{config: mq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := mq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := mq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(message.Table, message.FieldID, selector),
+			sqlgraph.To(date_message.Table, date_message.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, message.DateMessageTable, message.DateMessageColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(mq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first Message entity from the query.
 // Returns a *NotFoundError when no Message was found.
 func (mq *MessageQuery) First(ctx context.Context) (*Message, error) {
@@ -82,8 +133,8 @@ func (mq *MessageQuery) FirstX(ctx context.Context) *Message {
 
 // FirstID returns the first Message ID from the query.
 // Returns a *NotFoundError when no Message ID was found.
-func (mq *MessageQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (mq *MessageQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = mq.Limit(1).IDs(setContextOp(ctx, mq.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
@@ -95,7 +146,7 @@ func (mq *MessageQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (mq *MessageQuery) FirstIDX(ctx context.Context) int {
+func (mq *MessageQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := mq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -133,8 +184,8 @@ func (mq *MessageQuery) OnlyX(ctx context.Context) *Message {
 // OnlyID is like Only, but returns the only Message ID in the query.
 // Returns a *NotSingularError when more than one Message ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (mq *MessageQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (mq *MessageQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = mq.Limit(2).IDs(setContextOp(ctx, mq.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
@@ -150,7 +201,7 @@ func (mq *MessageQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (mq *MessageQuery) OnlyIDX(ctx context.Context) int {
+func (mq *MessageQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := mq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -178,7 +229,7 @@ func (mq *MessageQuery) AllX(ctx context.Context) []*Message {
 }
 
 // IDs executes the query and returns a list of Message IDs.
-func (mq *MessageQuery) IDs(ctx context.Context) (ids []int, err error) {
+func (mq *MessageQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
 	if mq.ctx.Unique == nil && mq.path != nil {
 		mq.Unique(true)
 	}
@@ -190,7 +241,7 @@ func (mq *MessageQuery) IDs(ctx context.Context) (ids []int, err error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (mq *MessageQuery) IDsX(ctx context.Context) []int {
+func (mq *MessageQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := mq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -245,19 +296,55 @@ func (mq *MessageQuery) Clone() *MessageQuery {
 		return nil
 	}
 	return &MessageQuery{
-		config:     mq.config,
-		ctx:        mq.ctx.Clone(),
-		order:      append([]message.OrderOption{}, mq.order...),
-		inters:     append([]Interceptor{}, mq.inters...),
-		predicates: append([]predicate.Message{}, mq.predicates...),
+		config:          mq.config,
+		ctx:             mq.ctx.Clone(),
+		order:           append([]message.OrderOption{}, mq.order...),
+		inters:          append([]Interceptor{}, mq.inters...),
+		predicates:      append([]predicate.Message{}, mq.predicates...),
+		withUser:        mq.withUser.Clone(),
+		withDateMessage: mq.withDateMessage.Clone(),
 		// clone intermediate query.
 		sql:  mq.sql.Clone(),
 		path: mq.path,
 	}
 }
 
+// WithUser tells the query-builder to eager-load the nodes that are connected to
+// the "user" edge. The optional arguments are used to configure the query builder of the edge.
+func (mq *MessageQuery) WithUser(opts ...func(*UserQuery)) *MessageQuery {
+	query := (&UserClient{config: mq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	mq.withUser = query
+	return mq
+}
+
+// WithDateMessage tells the query-builder to eager-load the nodes that are connected to
+// the "date_message" edge. The optional arguments are used to configure the query builder of the edge.
+func (mq *MessageQuery) WithDateMessage(opts ...func(*DateMessageQuery)) *MessageQuery {
+	query := (&DateMessageClient{config: mq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	mq.withDateMessage = query
+	return mq
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
+//
+// Example:
+//
+//	var v []struct {
+//		UserID uuid.UUID `json:"user_id,omitempty"`
+//		Count int `json:"count,omitempty"`
+//	}
+//
+//	client.Message.Query().
+//		GroupBy(message.FieldUserID).
+//		Aggregate(ent.Count()).
+//		Scan(ctx, &v)
 func (mq *MessageQuery) GroupBy(field string, fields ...string) *MessageGroupBy {
 	mq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &MessageGroupBy{build: mq}
@@ -269,6 +356,16 @@ func (mq *MessageQuery) GroupBy(field string, fields ...string) *MessageGroupBy 
 
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
+//
+// Example:
+//
+//	var v []struct {
+//		UserID uuid.UUID `json:"user_id,omitempty"`
+//	}
+//
+//	client.Message.Query().
+//		Select(message.FieldUserID).
+//		Scan(ctx, &v)
 func (mq *MessageQuery) Select(fields ...string) *MessageSelect {
 	mq.ctx.Fields = append(mq.ctx.Fields, fields...)
 	sbuild := &MessageSelect{MessageQuery: mq}
@@ -310,8 +407,12 @@ func (mq *MessageQuery) prepareQuery(ctx context.Context) error {
 
 func (mq *MessageQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Message, error) {
 	var (
-		nodes = []*Message{}
-		_spec = mq.querySpec()
+		nodes       = []*Message{}
+		_spec       = mq.querySpec()
+		loadedTypes = [2]bool{
+			mq.withUser != nil,
+			mq.withDateMessage != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Message).scanValues(nil, columns)
@@ -319,7 +420,11 @@ func (mq *MessageQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Mess
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Message{config: mq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
+	}
+	if len(mq.modifiers) > 0 {
+		_spec.Modifiers = mq.modifiers
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
@@ -330,11 +435,90 @@ func (mq *MessageQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Mess
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := mq.withUser; query != nil {
+		if err := mq.loadUser(ctx, query, nodes, nil,
+			func(n *Message, e *User) { n.Edges.User = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := mq.withDateMessage; query != nil {
+		if err := mq.loadDateMessage(ctx, query, nodes, nil,
+			func(n *Message, e *Date_Message) { n.Edges.DateMessage = e }); err != nil {
+			return nil, err
+		}
+	}
+	for i := range mq.loadTotal {
+		if err := mq.loadTotal[i](ctx, nodes); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (mq *MessageQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*Message, init func(*Message), assign func(*Message, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Message)
+	for i := range nodes {
+		fk := nodes[i].UserID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "user_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (mq *MessageQuery) loadDateMessage(ctx context.Context, query *DateMessageQuery, nodes []*Message, init func(*Message), assign func(*Message, *Date_Message)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Message)
+	for i := range nodes {
+		fk := nodes[i].DateID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(date_message.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "date_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (mq *MessageQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := mq.querySpec()
+	if len(mq.modifiers) > 0 {
+		_spec.Modifiers = mq.modifiers
+	}
 	_spec.Node.Columns = mq.ctx.Fields
 	if len(mq.ctx.Fields) > 0 {
 		_spec.Unique = mq.ctx.Unique != nil && *mq.ctx.Unique
@@ -343,7 +527,7 @@ func (mq *MessageQuery) sqlCount(ctx context.Context) (int, error) {
 }
 
 func (mq *MessageQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(message.Table, message.Columns, sqlgraph.NewFieldSpec(message.FieldID, field.TypeInt))
+	_spec := sqlgraph.NewQuerySpec(message.Table, message.Columns, sqlgraph.NewFieldSpec(message.FieldID, field.TypeUUID))
 	_spec.From = mq.sql
 	if unique := mq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
@@ -357,6 +541,12 @@ func (mq *MessageQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != message.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if mq.withUser != nil {
+			_spec.Node.AddColumnOnce(message.FieldUserID)
+		}
+		if mq.withDateMessage != nil {
+			_spec.Node.AddColumnOnce(message.FieldDateID)
 		}
 	}
 	if ps := mq.predicates; len(ps) > 0 {

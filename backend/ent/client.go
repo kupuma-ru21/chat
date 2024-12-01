@@ -11,11 +11,15 @@ import (
 
 	"backend/ent/migrate"
 
+	"backend/ent/date_message"
 	"backend/ent/message"
+	"backend/ent/user"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/google/uuid"
 )
 
 // Client is the client that holds all ent builders.
@@ -23,8 +27,12 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// Date_Message is the client for interacting with the Date_Message builders.
+	Date_Message *DateMessageClient
 	// Message is the client for interacting with the Message builders.
 	Message *MessageClient
+	// User is the client for interacting with the User builders.
+	User *UserClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -36,7 +44,9 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.Date_Message = NewDateMessageClient(c.config)
 	c.Message = NewMessageClient(c.config)
+	c.User = NewUserClient(c.config)
 }
 
 type (
@@ -127,9 +137,11 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:     ctx,
-		config:  cfg,
-		Message: NewMessageClient(cfg),
+		ctx:          ctx,
+		config:       cfg,
+		Date_Message: NewDateMessageClient(cfg),
+		Message:      NewMessageClient(cfg),
+		User:         NewUserClient(cfg),
 	}, nil
 }
 
@@ -147,16 +159,18 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:     ctx,
-		config:  cfg,
-		Message: NewMessageClient(cfg),
+		ctx:          ctx,
+		config:       cfg,
+		Date_Message: NewDateMessageClient(cfg),
+		Message:      NewMessageClient(cfg),
+		User:         NewUserClient(cfg),
 	}, nil
 }
 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Message.
+//		Date_Message.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -178,22 +192,179 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
+	c.Date_Message.Use(hooks...)
 	c.Message.Use(hooks...)
+	c.User.Use(hooks...)
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
+	c.Date_Message.Intercept(interceptors...)
 	c.Message.Intercept(interceptors...)
+	c.User.Intercept(interceptors...)
 }
 
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *DateMessageMutation:
+		return c.Date_Message.mutate(ctx, m)
 	case *MessageMutation:
 		return c.Message.mutate(ctx, m)
+	case *UserMutation:
+		return c.User.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// DateMessageClient is a client for the Date_Message schema.
+type DateMessageClient struct {
+	config
+}
+
+// NewDateMessageClient returns a client for the Date_Message from the given config.
+func NewDateMessageClient(c config) *DateMessageClient {
+	return &DateMessageClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `date_message.Hooks(f(g(h())))`.
+func (c *DateMessageClient) Use(hooks ...Hook) {
+	c.hooks.Date_Message = append(c.hooks.Date_Message, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `date_message.Intercept(f(g(h())))`.
+func (c *DateMessageClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Date_Message = append(c.inters.Date_Message, interceptors...)
+}
+
+// Create returns a builder for creating a Date_Message entity.
+func (c *DateMessageClient) Create() *DateMessageCreate {
+	mutation := newDateMessageMutation(c.config, OpCreate)
+	return &DateMessageCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Date_Message entities.
+func (c *DateMessageClient) CreateBulk(builders ...*DateMessageCreate) *DateMessageCreateBulk {
+	return &DateMessageCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *DateMessageClient) MapCreateBulk(slice any, setFunc func(*DateMessageCreate, int)) *DateMessageCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &DateMessageCreateBulk{err: fmt.Errorf("calling to DateMessageClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*DateMessageCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &DateMessageCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Date_Message.
+func (c *DateMessageClient) Update() *DateMessageUpdate {
+	mutation := newDateMessageMutation(c.config, OpUpdate)
+	return &DateMessageUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *DateMessageClient) UpdateOne(dm *Date_Message) *DateMessageUpdateOne {
+	mutation := newDateMessageMutation(c.config, OpUpdateOne, withDate_Message(dm))
+	return &DateMessageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *DateMessageClient) UpdateOneID(id uuid.UUID) *DateMessageUpdateOne {
+	mutation := newDateMessageMutation(c.config, OpUpdateOne, withDate_MessageID(id))
+	return &DateMessageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Date_Message.
+func (c *DateMessageClient) Delete() *DateMessageDelete {
+	mutation := newDateMessageMutation(c.config, OpDelete)
+	return &DateMessageDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *DateMessageClient) DeleteOne(dm *Date_Message) *DateMessageDeleteOne {
+	return c.DeleteOneID(dm.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *DateMessageClient) DeleteOneID(id uuid.UUID) *DateMessageDeleteOne {
+	builder := c.Delete().Where(date_message.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &DateMessageDeleteOne{builder}
+}
+
+// Query returns a query builder for Date_Message.
+func (c *DateMessageClient) Query() *DateMessageQuery {
+	return &DateMessageQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeDateMessage},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Date_Message entity by its id.
+func (c *DateMessageClient) Get(ctx context.Context, id uuid.UUID) (*Date_Message, error) {
+	return c.Query().Where(date_message.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *DateMessageClient) GetX(ctx context.Context, id uuid.UUID) *Date_Message {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryMessages queries the messages edge of a Date_Message.
+func (c *DateMessageClient) QueryMessages(dm *Date_Message) *MessageQuery {
+	query := (&MessageClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := dm.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(date_message.Table, date_message.FieldID, id),
+			sqlgraph.To(message.Table, message.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, date_message.MessagesTable, date_message.MessagesColumn),
+		)
+		fromV = sqlgraph.Neighbors(dm.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *DateMessageClient) Hooks() []Hook {
+	return c.hooks.Date_Message
+}
+
+// Interceptors returns the client interceptors.
+func (c *DateMessageClient) Interceptors() []Interceptor {
+	return c.inters.Date_Message
+}
+
+func (c *DateMessageClient) mutate(ctx context.Context, m *DateMessageMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&DateMessageCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&DateMessageUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&DateMessageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&DateMessageDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Date_Message mutation op: %q", m.Op())
 	}
 }
 
@@ -258,7 +429,7 @@ func (c *MessageClient) UpdateOne(m *Message) *MessageUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *MessageClient) UpdateOneID(id int) *MessageUpdateOne {
+func (c *MessageClient) UpdateOneID(id uuid.UUID) *MessageUpdateOne {
 	mutation := newMessageMutation(c.config, OpUpdateOne, withMessageID(id))
 	return &MessageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -275,7 +446,7 @@ func (c *MessageClient) DeleteOne(m *Message) *MessageDeleteOne {
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *MessageClient) DeleteOneID(id int) *MessageDeleteOne {
+func (c *MessageClient) DeleteOneID(id uuid.UUID) *MessageDeleteOne {
 	builder := c.Delete().Where(message.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -292,17 +463,49 @@ func (c *MessageClient) Query() *MessageQuery {
 }
 
 // Get returns a Message entity by its id.
-func (c *MessageClient) Get(ctx context.Context, id int) (*Message, error) {
+func (c *MessageClient) Get(ctx context.Context, id uuid.UUID) (*Message, error) {
 	return c.Query().Where(message.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *MessageClient) GetX(ctx context.Context, id int) *Message {
+func (c *MessageClient) GetX(ctx context.Context, id uuid.UUID) *Message {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryUser queries the user edge of a Message.
+func (c *MessageClient) QueryUser(m *Message) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(message.Table, message.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, message.UserTable, message.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDateMessage queries the date_message edge of a Message.
+func (c *MessageClient) QueryDateMessage(m *Message) *DateMessageQuery {
+	query := (&DateMessageClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(message.Table, message.FieldID, id),
+			sqlgraph.To(date_message.Table, date_message.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, message.DateMessageTable, message.DateMessageColumn),
+		)
+		fromV = sqlgraph.Neighbors(m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -330,12 +533,161 @@ func (c *MessageClient) mutate(ctx context.Context, m *MessageMutation) (Value, 
 	}
 }
 
+// UserClient is a client for the User schema.
+type UserClient struct {
+	config
+}
+
+// NewUserClient returns a client for the User from the given config.
+func NewUserClient(c config) *UserClient {
+	return &UserClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `user.Hooks(f(g(h())))`.
+func (c *UserClient) Use(hooks ...Hook) {
+	c.hooks.User = append(c.hooks.User, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `user.Intercept(f(g(h())))`.
+func (c *UserClient) Intercept(interceptors ...Interceptor) {
+	c.inters.User = append(c.inters.User, interceptors...)
+}
+
+// Create returns a builder for creating a User entity.
+func (c *UserClient) Create() *UserCreate {
+	mutation := newUserMutation(c.config, OpCreate)
+	return &UserCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of User entities.
+func (c *UserClient) CreateBulk(builders ...*UserCreate) *UserCreateBulk {
+	return &UserCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *UserClient) MapCreateBulk(slice any, setFunc func(*UserCreate, int)) *UserCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &UserCreateBulk{err: fmt.Errorf("calling to UserClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*UserCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &UserCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for User.
+func (c *UserClient) Update() *UserUpdate {
+	mutation := newUserMutation(c.config, OpUpdate)
+	return &UserUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *UserClient) UpdateOne(u *User) *UserUpdateOne {
+	mutation := newUserMutation(c.config, OpUpdateOne, withUser(u))
+	return &UserUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *UserClient) UpdateOneID(id uuid.UUID) *UserUpdateOne {
+	mutation := newUserMutation(c.config, OpUpdateOne, withUserID(id))
+	return &UserUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for User.
+func (c *UserClient) Delete() *UserDelete {
+	mutation := newUserMutation(c.config, OpDelete)
+	return &UserDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *UserClient) DeleteOne(u *User) *UserDeleteOne {
+	return c.DeleteOneID(u.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *UserClient) DeleteOneID(id uuid.UUID) *UserDeleteOne {
+	builder := c.Delete().Where(user.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &UserDeleteOne{builder}
+}
+
+// Query returns a query builder for User.
+func (c *UserClient) Query() *UserQuery {
+	return &UserQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeUser},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a User entity by its id.
+func (c *UserClient) Get(ctx context.Context, id uuid.UUID) (*User, error) {
+	return c.Query().Where(user.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *UserClient) GetX(ctx context.Context, id uuid.UUID) *User {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryMessages queries the messages edge of a User.
+func (c *UserClient) QueryMessages(u *User) *MessageQuery {
+	query := (&MessageClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(message.Table, message.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.MessagesTable, user.MessagesColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *UserClient) Hooks() []Hook {
+	return c.hooks.User
+}
+
+// Interceptors returns the client interceptors.
+func (c *UserClient) Interceptors() []Interceptor {
+	return c.inters.User
+}
+
+func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&UserCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&UserUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&UserUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&UserDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown User mutation op: %q", m.Op())
+	}
+}
+
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Message []ent.Hook
+		Date_Message, Message, User []ent.Hook
 	}
 	inters struct {
-		Message []ent.Interceptor
+		Date_Message, Message, User []ent.Interceptor
 	}
 )

@@ -1,0 +1,4 @@
+# REF: https://github.com/graphql/graphql-js/issues/937#issue-240146967
+type Mutation {
+  _mutation: Boolean
+}

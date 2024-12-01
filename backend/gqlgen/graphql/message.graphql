@@ -1,0 +1,3 @@
+extend type Mutation {
+  createMessage(userId: ID!, content: String!): ID!
+}

@@ -4,6 +4,8 @@ package message
 
 import (
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/google/uuid"
 )
 
 const (
@@ -11,13 +13,43 @@ const (
 	Label = "message"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldUserID holds the string denoting the user_id field in the database.
+	FieldUserID = "user_id"
+	// FieldContent holds the string denoting the content field in the database.
+	FieldContent = "content"
+	// FieldCreatedAt holds the string denoting the created_at field in the database.
+	FieldCreatedAt = "created_at"
+	// FieldDateID holds the string denoting the date_id field in the database.
+	FieldDateID = "date_id"
+	// EdgeUser holds the string denoting the user edge name in mutations.
+	EdgeUser = "user"
+	// EdgeDateMessage holds the string denoting the date_message edge name in mutations.
+	EdgeDateMessage = "date_message"
 	// Table holds the table name of the message in the database.
 	Table = "messages"
+	// UserTable is the table that holds the user relation/edge.
+	UserTable = "messages"
+	// UserInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	UserInverseTable = "users"
+	// UserColumn is the table column denoting the user relation/edge.
+	UserColumn = "user_id"
+	// DateMessageTable is the table that holds the date_message relation/edge.
+	DateMessageTable = "messages"
+	// DateMessageInverseTable is the table name for the Date_Message entity.
+	// It exists in this package in order to avoid circular dependency with the "date_message" package.
+	DateMessageInverseTable = "date_messages"
+	// DateMessageColumn is the table column denoting the date_message relation/edge.
+	DateMessageColumn = "date_id"
 )
 
 // Columns holds all SQL columns for message fields.
 var Columns = []string{
 	FieldID,
+	FieldUserID,
+	FieldContent,
+	FieldCreatedAt,
+	FieldDateID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -30,10 +62,69 @@ func ValidColumn(column string) bool {
 	return false
 }
 
+var (
+	// DefaultUserID holds the default value on creation for the "user_id" field.
+	DefaultUserID func() uuid.UUID
+	// ContentValidator is a validator for the "content" field. It is called by the builders before save.
+	ContentValidator func(string) error
+	// DefaultDateID holds the default value on creation for the "date_id" field.
+	DefaultDateID func() uuid.UUID
+	// DefaultID holds the default value on creation for the "id" field.
+	DefaultID func() uuid.UUID
+)
+
 // OrderOption defines the ordering options for the Message queries.
 type OrderOption func(*sql.Selector)
 
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByUserID orders the results by the user_id field.
+func ByUserID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUserID, opts...).ToFunc()
+}
+
+// ByContent orders the results by the content field.
+func ByContent(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldContent, opts...).ToFunc()
+}
+
+// ByCreatedAt orders the results by the created_at field.
+func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
+}
+
+// ByDateID orders the results by the date_id field.
+func ByDateID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDateID, opts...).ToFunc()
+}
+
+// ByUserField orders the results by user field.
+func ByUserField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newUserStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByDateMessageField orders the results by date_message field.
+func ByDateMessageField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDateMessageStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newUserStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(UserInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
+	)
+}
+func newDateMessageStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DateMessageInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, DateMessageTable, DateMessageColumn),
+	)
 }

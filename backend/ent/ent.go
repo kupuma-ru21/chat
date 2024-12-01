@@ -3,7 +3,9 @@
 package ent
 
 import (
+	"backend/ent/date_message"
 	"backend/ent/message"
+	"backend/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -73,7 +75,9 @@ var (
 func checkColumn(table, column string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			message.Table: message.ValidColumn,
+			date_message.Table: date_message.ValidColumn,
+			message.Table:      message.ValidColumn,
+			user.Table:         user.ValidColumn,
 		})
 	})
 	return columnCheck(table, column)

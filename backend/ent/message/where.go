@@ -4,53 +4,267 @@ package message
 
 import (
 	"backend/ent/predicate"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/google/uuid"
 )
 
 // ID filters vertices based on their ID field.
-func ID(id int) predicate.Message {
+func ID(id uuid.UUID) predicate.Message {
 	return predicate.Message(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
-func IDEQ(id int) predicate.Message {
+func IDEQ(id uuid.UUID) predicate.Message {
 	return predicate.Message(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
-func IDNEQ(id int) predicate.Message {
+func IDNEQ(id uuid.UUID) predicate.Message {
 	return predicate.Message(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
-func IDIn(ids ...int) predicate.Message {
+func IDIn(ids ...uuid.UUID) predicate.Message {
 	return predicate.Message(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
-func IDNotIn(ids ...int) predicate.Message {
+func IDNotIn(ids ...uuid.UUID) predicate.Message {
 	return predicate.Message(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
-func IDGT(id int) predicate.Message {
+func IDGT(id uuid.UUID) predicate.Message {
 	return predicate.Message(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
-func IDGTE(id int) predicate.Message {
+func IDGTE(id uuid.UUID) predicate.Message {
 	return predicate.Message(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
-func IDLT(id int) predicate.Message {
+func IDLT(id uuid.UUID) predicate.Message {
 	return predicate.Message(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
-func IDLTE(id int) predicate.Message {
+func IDLTE(id uuid.UUID) predicate.Message {
 	return predicate.Message(sql.FieldLTE(FieldID, id))
+}
+
+// UserID applies equality check predicate on the "user_id" field. It's identical to UserIDEQ.
+func UserID(v uuid.UUID) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldUserID, v))
+}
+
+// Content applies equality check predicate on the "content" field. It's identical to ContentEQ.
+func Content(v string) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldContent, v))
+}
+
+// CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
+func CreatedAt(v time.Time) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldCreatedAt, v))
+}
+
+// DateID applies equality check predicate on the "date_id" field. It's identical to DateIDEQ.
+func DateID(v uuid.UUID) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldDateID, v))
+}
+
+// UserIDEQ applies the EQ predicate on the "user_id" field.
+func UserIDEQ(v uuid.UUID) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldUserID, v))
+}
+
+// UserIDNEQ applies the NEQ predicate on the "user_id" field.
+func UserIDNEQ(v uuid.UUID) predicate.Message {
+	return predicate.Message(sql.FieldNEQ(FieldUserID, v))
+}
+
+// UserIDIn applies the In predicate on the "user_id" field.
+func UserIDIn(vs ...uuid.UUID) predicate.Message {
+	return predicate.Message(sql.FieldIn(FieldUserID, vs...))
+}
+
+// UserIDNotIn applies the NotIn predicate on the "user_id" field.
+func UserIDNotIn(vs ...uuid.UUID) predicate.Message {
+	return predicate.Message(sql.FieldNotIn(FieldUserID, vs...))
+}
+
+// ContentEQ applies the EQ predicate on the "content" field.
+func ContentEQ(v string) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldContent, v))
+}
+
+// ContentNEQ applies the NEQ predicate on the "content" field.
+func ContentNEQ(v string) predicate.Message {
+	return predicate.Message(sql.FieldNEQ(FieldContent, v))
+}
+
+// ContentIn applies the In predicate on the "content" field.
+func ContentIn(vs ...string) predicate.Message {
+	return predicate.Message(sql.FieldIn(FieldContent, vs...))
+}
+
+// ContentNotIn applies the NotIn predicate on the "content" field.
+func ContentNotIn(vs ...string) predicate.Message {
+	return predicate.Message(sql.FieldNotIn(FieldContent, vs...))
+}
+
+// ContentGT applies the GT predicate on the "content" field.
+func ContentGT(v string) predicate.Message {
+	return predicate.Message(sql.FieldGT(FieldContent, v))
+}
+
+// ContentGTE applies the GTE predicate on the "content" field.
+func ContentGTE(v string) predicate.Message {
+	return predicate.Message(sql.FieldGTE(FieldContent, v))
+}
+
+// ContentLT applies the LT predicate on the "content" field.
+func ContentLT(v string) predicate.Message {
+	return predicate.Message(sql.FieldLT(FieldContent, v))
+}
+
+// ContentLTE applies the LTE predicate on the "content" field.
+func ContentLTE(v string) predicate.Message {
+	return predicate.Message(sql.FieldLTE(FieldContent, v))
+}
+
+// ContentContains applies the Contains predicate on the "content" field.
+func ContentContains(v string) predicate.Message {
+	return predicate.Message(sql.FieldContains(FieldContent, v))
+}
+
+// ContentHasPrefix applies the HasPrefix predicate on the "content" field.
+func ContentHasPrefix(v string) predicate.Message {
+	return predicate.Message(sql.FieldHasPrefix(FieldContent, v))
+}
+
+// ContentHasSuffix applies the HasSuffix predicate on the "content" field.
+func ContentHasSuffix(v string) predicate.Message {
+	return predicate.Message(sql.FieldHasSuffix(FieldContent, v))
+}
+
+// ContentEqualFold applies the EqualFold predicate on the "content" field.
+func ContentEqualFold(v string) predicate.Message {
+	return predicate.Message(sql.FieldEqualFold(FieldContent, v))
+}
+
+// ContentContainsFold applies the ContainsFold predicate on the "content" field.
+func ContentContainsFold(v string) predicate.Message {
+	return predicate.Message(sql.FieldContainsFold(FieldContent, v))
+}
+
+// CreatedAtEQ applies the EQ predicate on the "created_at" field.
+func CreatedAtEQ(v time.Time) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldCreatedAt, v))
+}
+
+// CreatedAtNEQ applies the NEQ predicate on the "created_at" field.
+func CreatedAtNEQ(v time.Time) predicate.Message {
+	return predicate.Message(sql.FieldNEQ(FieldCreatedAt, v))
+}
+
+// CreatedAtIn applies the In predicate on the "created_at" field.
+func CreatedAtIn(vs ...time.Time) predicate.Message {
+	return predicate.Message(sql.FieldIn(FieldCreatedAt, vs...))
+}
+
+// CreatedAtNotIn applies the NotIn predicate on the "created_at" field.
+func CreatedAtNotIn(vs ...time.Time) predicate.Message {
+	return predicate.Message(sql.FieldNotIn(FieldCreatedAt, vs...))
+}
+
+// CreatedAtGT applies the GT predicate on the "created_at" field.
+func CreatedAtGT(v time.Time) predicate.Message {
+	return predicate.Message(sql.FieldGT(FieldCreatedAt, v))
+}
+
+// CreatedAtGTE applies the GTE predicate on the "created_at" field.
+func CreatedAtGTE(v time.Time) predicate.Message {
+	return predicate.Message(sql.FieldGTE(FieldCreatedAt, v))
+}
+
+// CreatedAtLT applies the LT predicate on the "created_at" field.
+func CreatedAtLT(v time.Time) predicate.Message {
+	return predicate.Message(sql.FieldLT(FieldCreatedAt, v))
+}
+
+// CreatedAtLTE applies the LTE predicate on the "created_at" field.
+func CreatedAtLTE(v time.Time) predicate.Message {
+	return predicate.Message(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// DateIDEQ applies the EQ predicate on the "date_id" field.
+func DateIDEQ(v uuid.UUID) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldDateID, v))
+}
+
+// DateIDNEQ applies the NEQ predicate on the "date_id" field.
+func DateIDNEQ(v uuid.UUID) predicate.Message {
+	return predicate.Message(sql.FieldNEQ(FieldDateID, v))
+}
+
+// DateIDIn applies the In predicate on the "date_id" field.
+func DateIDIn(vs ...uuid.UUID) predicate.Message {
+	return predicate.Message(sql.FieldIn(FieldDateID, vs...))
+}
+
+// DateIDNotIn applies the NotIn predicate on the "date_id" field.
+func DateIDNotIn(vs ...uuid.UUID) predicate.Message {
+	return predicate.Message(sql.FieldNotIn(FieldDateID, vs...))
+}
+
+// HasUser applies the HasEdge predicate on the "user" edge.
+func HasUser() predicate.Message {
+	return predicate.Message(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasUserWith applies the HasEdge predicate on the "user" edge with a given conditions (other predicates).
+func HasUserWith(preds ...predicate.User) predicate.Message {
+	return predicate.Message(func(s *sql.Selector) {
+		step := newUserStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasDateMessage applies the HasEdge predicate on the "date_message" edge.
+func HasDateMessage() predicate.Message {
+	return predicate.Message(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, DateMessageTable, DateMessageColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasDateMessageWith applies the HasEdge predicate on the "date_message" edge with a given conditions (other predicates).
+func HasDateMessageWith(preds ...predicate.Date_Message) predicate.Message {
+	return predicate.Message(func(s *sql.Selector) {
+		step := newDateMessageStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

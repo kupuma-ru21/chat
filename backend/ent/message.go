@@ -3,20 +3,70 @@
 package ent
 
 import (
+	"backend/ent/date_message"
 	"backend/ent/message"
+	"backend/ent/user"
 	"fmt"
 	"strings"
+	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
 )
 
 // Message is the model entity for the Message schema.
 type Message struct {
-	config
+	config `json:"-"`
 	// ID of the ent.
-	ID           int `json:"id,omitempty"`
+	ID uuid.UUID `json:"id,omitempty"`
+	// UserID holds the value of the "user_id" field.
+	UserID uuid.UUID `json:"user_id,omitempty"`
+	// Content holds the value of the "content" field.
+	Content string `json:"content,omitempty"`
+	// CreatedAt holds the value of the "created_at" field.
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// DateID holds the value of the "date_id" field.
+	DateID uuid.UUID `json:"date_id,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the MessageQuery when eager-loading is set.
+	Edges        MessageEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// MessageEdges holds the relations/edges for other nodes in the graph.
+type MessageEdges struct {
+	// User holds the value of the user edge.
+	User *User `json:"user,omitempty"`
+	// DateMessage holds the value of the date_message edge.
+	DateMessage *Date_Message `json:"date_message,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [2]bool
+	// totalCount holds the count of the edges above.
+	totalCount [2]map[string]int
+}
+
+// UserOrErr returns the User value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e MessageEdges) UserOrErr() (*User, error) {
+	if e.User != nil {
+		return e.User, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "user"}
+}
+
+// DateMessageOrErr returns the DateMessage value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e MessageEdges) DateMessageOrErr() (*Date_Message, error) {
+	if e.DateMessage != nil {
+		return e.DateMessage, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: date_message.Label}
+	}
+	return nil, &NotLoadedError{edge: "date_message"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -24,8 +74,12 @@ func (*Message) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case message.FieldID:
-			values[i] = new(sql.NullInt64)
+		case message.FieldContent:
+			values[i] = new(sql.NullString)
+		case message.FieldCreatedAt:
+			values[i] = new(sql.NullTime)
+		case message.FieldID, message.FieldUserID, message.FieldDateID:
+			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -42,11 +96,35 @@ func (m *Message) assignValues(columns []string, values []any) error {
 	for i := range columns {
 		switch columns[i] {
 		case message.FieldID:
-			value, ok := values[i].(*sql.NullInt64)
-			if !ok {
-				return fmt.Errorf("unexpected type %T for field id", value)
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field id", values[i])
+			} else if value != nil {
+				m.ID = *value
 			}
-			m.ID = int(value.Int64)
+		case message.FieldUserID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field user_id", values[i])
+			} else if value != nil {
+				m.UserID = *value
+			}
+		case message.FieldContent:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field content", values[i])
+			} else if value.Valid {
+				m.Content = value.String
+			}
+		case message.FieldCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+			} else if value.Valid {
+				m.CreatedAt = value.Time
+			}
+		case message.FieldDateID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field date_id", values[i])
+			} else if value != nil {
+				m.DateID = *value
+			}
 		default:
 			m.selectValues.Set(columns[i], values[i])
 		}
@@ -58,6 +136,16 @@ func (m *Message) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (m *Message) Value(name string) (ent.Value, error) {
 	return m.selectValues.Get(name)
+}
+
+// QueryUser queries the "user" edge of the Message entity.
+func (m *Message) QueryUser() *UserQuery {
+	return NewMessageClient(m.config).QueryUser(m)
+}
+
+// QueryDateMessage queries the "date_message" edge of the Message entity.
+func (m *Message) QueryDateMessage() *DateMessageQuery {
+	return NewMessageClient(m.config).QueryDateMessage(m)
 }
 
 // Update returns a builder for updating this Message.
@@ -82,7 +170,18 @@ func (m *Message) Unwrap() *Message {
 func (m *Message) String() string {
 	var builder strings.Builder
 	builder.WriteString("Message(")
-	builder.WriteString(fmt.Sprintf("id=%v", m.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", m.ID))
+	builder.WriteString("user_id=")
+	builder.WriteString(fmt.Sprintf("%v", m.UserID))
+	builder.WriteString(", ")
+	builder.WriteString("content=")
+	builder.WriteString(m.Content)
+	builder.WriteString(", ")
+	builder.WriteString("created_at=")
+	builder.WriteString(m.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("date_id=")
+	builder.WriteString(fmt.Sprintf("%v", m.DateID))
 	builder.WriteByte(')')
 	return builder.String()
 }

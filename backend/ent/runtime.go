@@ -2,8 +2,47 @@
 
 package ent
 
+import (
+	"backend/ent/date_message"
+	"backend/ent/message"
+	"backend/ent/schema"
+	"backend/ent/user"
+
+	"github.com/google/uuid"
+)
+
 // The init function reads all schema descriptors with runtime code
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	date_messageFields := schema.Date_Message{}.Fields()
+	_ = date_messageFields
+	// date_messageDescID is the schema descriptor for id field.
+	date_messageDescID := date_messageFields[0].Descriptor()
+	// date_message.DefaultID holds the default value on creation for the id field.
+	date_message.DefaultID = date_messageDescID.Default.(func() uuid.UUID)
+	messageFields := schema.Message{}.Fields()
+	_ = messageFields
+	// messageDescUserID is the schema descriptor for user_id field.
+	messageDescUserID := messageFields[1].Descriptor()
+	// message.DefaultUserID holds the default value on creation for the user_id field.
+	message.DefaultUserID = messageDescUserID.Default.(func() uuid.UUID)
+	// messageDescContent is the schema descriptor for content field.
+	messageDescContent := messageFields[2].Descriptor()
+	// message.ContentValidator is a validator for the "content" field. It is called by the builders before save.
+	message.ContentValidator = messageDescContent.Validators[0].(func(string) error)
+	// messageDescDateID is the schema descriptor for date_id field.
+	messageDescDateID := messageFields[4].Descriptor()
+	// message.DefaultDateID holds the default value on creation for the date_id field.
+	message.DefaultDateID = messageDescDateID.Default.(func() uuid.UUID)
+	// messageDescID is the schema descriptor for id field.
+	messageDescID := messageFields[0].Descriptor()
+	// message.DefaultID holds the default value on creation for the id field.
+	message.DefaultID = messageDescID.Default.(func() uuid.UUID)
+	userFields := schema.User{}.Fields()
+	_ = userFields
+	// userDescID is the schema descriptor for id field.
+	userDescID := userFields[0].Descriptor()
+	// user.DefaultID holds the default value on creation for the id field.
+	user.DefaultID = userDescID.Default.(func() uuid.UUID)
 }
