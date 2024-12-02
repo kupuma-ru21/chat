@@ -1,8 +1,8 @@
 "use client";
 
 import { Box, Button, Flex, Input, Text } from "@/libs/chakra-ui/react";
-import { FORM_HEIGHT } from "../../constants";
 import { useHooks } from "./hooks";
+import { FORM_HEIGHT } from "@/app/components/page-entity/constants";
 
 export function ChatForm() {
   const { error, isPending, submitAction } = useHooks();
