@@ -28,6 +28,11 @@ func main() {
 		}
 	}
 
+	port := os.Getenv("PORT")
+	if port == "" {
+		log.Fatal("port is not set")
+	}
+
 	postgresUser := os.Getenv("POSTGRES_USER")
 	if postgresUser == "" {
 		log.Fatal("postgresUser is not set")
@@ -76,11 +81,6 @@ func main() {
 		playground.Handler("Todo", "/query"),
 	)
 	http.Handle("/query", srv)
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		log.Fatal("port is not set")
-	}
 
 	log.Printf("listening on http://localhost:%s/", port)
 	if err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil); err != nil {
