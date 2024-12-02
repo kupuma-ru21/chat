@@ -1,8 +1,8 @@
 "use server";
 
 import { createApolloClient } from "@/apollo-client";
+import { LoginDocument } from "@/gql/graphql";
 import { cookies } from "next/headers";
-import { LoginDocument } from "../../../../../gql/graphql";
 
 export async function setCookie() {
   const cookieStore = await cookies();

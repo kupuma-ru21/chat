@@ -40,4 +40,4 @@ yarn-error.log*
 next-env.d.ts
 
 # TODO: must run generate command on github actions, cloud environment, and things like that
-gql
+src/gql

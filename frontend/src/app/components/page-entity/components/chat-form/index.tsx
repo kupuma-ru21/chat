@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, Button, Flex, Input, Text } from "@/libs/chakra-ui/react";
-import { FORM_HEIGHT } from "../constants";
+import { FORM_HEIGHT } from "../../constants";
 import { useHooks } from "./hooks";
 
 export function ChatForm() {
@@ -12,7 +12,7 @@ export function ChatForm() {
       p="16px"
       position="fixed"
       bottom={0}
-      backgroundColor="GrayText"
+      backgroundColor="gray.900"
       w="100%"
       h={`${FORM_HEIGHT}px`}
     >

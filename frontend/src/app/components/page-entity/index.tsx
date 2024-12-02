@@ -1,9 +1,9 @@
 import { createApolloClient } from "@/apollo-client";
 import { Box, Divider, Flex, Text } from "@/libs/chakra-ui/react";
 import dayjs from "@/libs/dayjs";
-import { MessagesByDateDocument } from "../../../../gql/graphql";
 import { FORM_HEIGHT } from "./constants";
 import { ChatForm } from "./components/chat-form";
+import { MessagesByDateDocument } from "@/gql/graphql";
 
 export async function PageEntity() {
   const client = createApolloClient();

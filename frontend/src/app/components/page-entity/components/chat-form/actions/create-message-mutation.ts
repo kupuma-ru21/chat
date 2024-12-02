@@ -2,8 +2,8 @@
 
 import { createApolloClient } from "@/apollo-client";
 import { cookies } from "next/headers";
-import { CreateMessageDocument } from "../../../../../../gql/graphql";
 import { revalidatePath } from "next/cache";
+import { CreateMessageDocument } from "@/gql/graphql";
 
 export async function createMessageMutation(
   _prev: unknown,

@@ -5,7 +5,7 @@ const config: CodegenConfig = {
   documents: ["**/*.graphql"],
   ignoreNoDocuments: true, // for better experience with the watcher
   generates: {
-    "./gql/": {
+    "./src/gql/": {
       preset: "client",
       plugins: [],
       presetConfig: {
