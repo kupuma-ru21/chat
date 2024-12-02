@@ -11,5 +11,6 @@ import (
 
 // MessagesByDate is the resolver for the messages_by_date field.
 func (r *queryResolver) MessagesByDate(ctx context.Context) ([]*ent.Date_Message, error) {
+	// TODO: to add order, use ulid instead of uuid
 	return r.client.Date_Message.Query().All(ctx)
 }

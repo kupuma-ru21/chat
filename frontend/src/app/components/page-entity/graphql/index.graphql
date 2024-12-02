@@ -1,0 +1,16 @@
+mutation CreateMessage($userId: ID!, $content: String!) {
+  createMessage(userId: $userId, content: $content)
+}
+
+query MessagesByDate {
+  messagesByDate {
+    id
+    createdAt
+    messages {
+      id
+      userID
+      createdAt
+      content
+    }
+  }
+}

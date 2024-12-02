@@ -14,11 +14,16 @@ import (
 
 // CreateMessage is the resolver for the createMessage field.
 func (r *mutationResolver) CreateMessage(ctx context.Context, userID uuid.UUID, content string) (uuid.UUID, error) {
+	if content == "" {
+		return uuid.Nil, errCustom.Create("content is required")
+	}
 	if userID == uuid.Nil {
 		return uuid.Nil, errCustom.Create("userID is required")
 	}
-	if content == "" {
-		return uuid.Nil, errCustom.Create("content is required")
+
+	_, err := r.client.User.Get(ctx, userID)
+	if err != nil {
+		return uuid.Nil, err
 	}
 
 	createdAt := time.Now()
